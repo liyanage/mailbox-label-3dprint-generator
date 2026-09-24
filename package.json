@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/three": "0.186.0",
+    "harfbuzzjs": "1.6.2",
+    "manifold-3d": "3.5.3",
+    "three": "0.186.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  },
+  "name": "mailbox-label-3dprint-generator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/geometry.test.mjs",
+    "test:update-fixtures": "node tests/regenerate-fixtures.mjs",
+    "test:browser": "playwright test"
+  }
+}

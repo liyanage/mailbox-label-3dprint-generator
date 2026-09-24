@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f5f1" />
+    <meta name="description" content="Create a custom 3D-printable mailbox label with one or two name lines. Generate and preview your STL entirely in your browser." />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Mailbox labels</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="page-header">
+        <h1>Mailbox labels</h1>
+      </header>
+      <main class="workspace">
+        <div class="editor">
+          <section class="font-section" aria-labelledby="font-heading">
+            <div class="section-heading"><h2 id="font-heading">Font</h2></div>
+            <p id="font-name" class="font-name">No font selected</p>
+            <div class="font-actions"><button id="choose-font" class="button-small" type="button">Choose font</button><button id="forget-font" class="text-button" type="button" hidden>Forget font</button></div>
+            <input id="font-file" type="file" accept=".otf,.ttf" aria-label="Choose font file" hidden />
+            <p id="font-note" class="note">Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.</p>
+          </section>
+          <form id="label-form">
+            <div class="text-fields">
+              <label class="field unit-field" for="unit"><span>Unit number</span><input id="unit" name="unit" value="48" maxlength="12" autocomplete="off" required spellcheck="false" /></label>
+              <label class="field" for="name-one"><span>Name</span><input id="name-one" name="name" value="EXAMPLE" maxlength="80" autocomplete="off" required spellcheck="false" /></label>
+              <div id="second-name-row" hidden>
+                <div class="second-name-heading"><label for="name-two">Second name</label><button id="remove-name" class="text-button" type="button">Remove</button></div>
+                <input id="name-two" name="second-name" value="" maxlength="80" autocomplete="off" disabled spellcheck="false" />
+              </div>
+              <button id="add-name" class="add-name" type="button"><span aria-hidden="true">＋</span> Add a second name</button>
+            </div>
+            <details class="advanced">
+              <summary>Advanced <span aria-hidden="true">+</span></summary>
+              <div class="advanced-content">
+                <div class="settings-grid">
+                  <label>Width <span>mm</span><input id="setting-width" type="number" value="44.5" min="10" max="300" step="any" required /></label>
+                  <label>Height <span>mm</span><input id="setting-height" type="number" value="38.5" min="10" max="300" step="any" required /></label>
+                  <label>Corner radius <span>mm</span><input id="setting-radius" type="number" value="3.465" min="0" max="150" step="any" required /></label>
+                  <label>Side margin <span>mm</span><input id="setting-margin" type="number" value="3" min="0" max="149" step="any" required /></label>
+                  <label>Base thickness <span>mm</span><input id="setting-baseThickness" type="number" value="2" min="0.2" max="10" step="any" required /></label>
+                  <label>Raised text <span>mm</span><input id="setting-textThickness" type="number" value="1" min="0.2" max="10" step="any" required /></label>
+                  <label>Number size <span>pt</span><input id="setting-numberPt" type="number" value="50" min="4" max="180" step="any" required /></label>
+                  <label>Name size <span>pt</span><input id="setting-namePt" type="number" value="20" min="4" max="180" step="any" required /></label>
+                </div>
+                <label class="fit-setting" for="setting-fit">Long text<select id="setting-fit"><option value="shrink">Shrink to fit</option><option value="error">Keep size and report overflow</option></select></label>
+                <button id="reset-settings" class="text-button" type="button">Restore default settings</button>
+              </div>
+            </details>
+            <button id="generate" class="generate" type="submit" disabled>Generate label</button>
+            <p id="status" class="status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+        <section class="preview-section" aria-labelledby="preview-heading">
+          <div class="preview-heading"><h2 id="preview-heading">Preview</h2></div>
+          <div id="stage" class="stage">
+            <div id="canvas-container" class="canvas-container"></div>
+            <div id="fallback-preview" class="fallback-preview"></div>
+            <div id="view-controls" class="view-controls" aria-label="Preview view"><button id="reset-view" type="button" aria-label="Reset preview view">Reset</button></div>
+          </div>
+          <div class="preview-information"><p id="dimensions">44.5 × 38.5 × 3 mm</p><p id="preview-note" hidden></p></div>
+          <div class="export-row"><p id="layer-note" class="note">Change color above 2 mm.</p><button id="download" class="download" type="button" disabled>Download STL <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2v11m-4-4 4 4 4-4M3 13v4h14v-4" /></svg></button></div>
+          <p id="fit-note" class="fit-note" aria-live="polite"></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "units": "mm",
+  "settings": {
+    "width": 44.5,
+    "height": 38.5,
+    "radius": 3.465,
+    "base_thickness": 2,
+    "text_thickness": 1,
+    "number_pt": 50,
+    "name_pt": 20,
+    "margin": 3,
+    "tolerance": 0.01,
+    "fit": "shrink"
+  },
+  "rows": [
+    {
+      "text": "54",
+      "requested_pt": 50,
+      "effective_pt": 50,
+      "bounds_mm": [
+        11.776909720152617,
+        20.990494563238954,
+        32.72309027984738,
+        33.883764422493314
+      ]
+    },
+    {
+      "text": "ALPHA",
+      "requested_pt": 20,
+      "effective_pt": 20,
+      "bounds_mm": [
+        10.931138779968023,
+        10.736639136236047,
+        33.56886122003198,
+        15.842270644169187
+      ]
+    },
+    {
+      "text": "BETA",
+      "requested_pt": 20,
+      "effective_pt": 20,
+      "bounds_mm": [
+        14.066175673156977,
+        3.681091222536047,
+        30.433824326843023,
+        8.786722730469187
+      ]
+    }
+  ],
+  "volume_mm3": 3629.5786221163767,
+  "triangles": 3608,
+  "color_change_z_mm": 2,
+  "bounds_mm": [
+    0,
+    0,
+    0,
+    44.5,
+    38.5,
+    3
+  ]
+}

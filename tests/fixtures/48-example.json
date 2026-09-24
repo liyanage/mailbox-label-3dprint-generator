@@ -1,0 +1,50 @@
+{
+  "units": "mm",
+  "settings": {
+    "width": 44.5,
+    "height": 38.5,
+    "radius": 3.465,
+    "base_thickness": 2,
+    "text_thickness": 1,
+    "number_pt": 50,
+    "name_pt": 20,
+    "margin": 3,
+    "tolerance": 0.01,
+    "fit": "shrink"
+  },
+  "rows": [
+    {
+      "text": "48",
+      "requested_pt": 50,
+      "effective_pt": 50,
+      "bounds_mm": [
+        11.445319283753633,
+        18.874718484138953,
+        33.05468071624637,
+        31.854115728890406
+      ]
+    },
+    {
+      "text": "EXAMPLE",
+      "requested_pt": 20,
+      "effective_pt": 20,
+      "bounds_mm": [
+        6.583428278565407,
+        7.033098473736047,
+        37.91657172143459,
+        12.138729981669186
+      ]
+    }
+  ],
+  "volume_mm3": 3623.063008843047,
+  "triangles": 3524,
+  "color_change_z_mm": 2,
+  "bounds_mm": [
+    0,
+    0,
+    0,
+    44.5,
+    38.5,
+    3
+  ]
+}

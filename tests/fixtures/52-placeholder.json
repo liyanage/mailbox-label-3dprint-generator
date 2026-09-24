@@ -1,0 +1,50 @@
+{
+  "units": "mm",
+  "settings": {
+    "width": 44.5,
+    "height": 38.5,
+    "radius": 3.465,
+    "base_thickness": 2,
+    "text_thickness": 1,
+    "number_pt": 50,
+    "name_pt": 20,
+    "margin": 3,
+    "tolerance": 0.01,
+    "fit": "shrink"
+  },
+  "rows": [
+    {
+      "text": "52",
+      "requested_pt": 50,
+      "effective_pt": 50,
+      "bounds_mm": [
+        12.280754934996367,
+        18.874718484138953,
+        32.21924506500363,
+        31.854115728890406
+      ]
+    },
+    {
+      "text": "PLACEHOLDER",
+      "requested_pt": 20,
+      "effective_pt": 15.717731486095882,
+      "bounds_mm": [
+        3.000000000000001,
+        7.033576387798184,
+        41.5,
+        11.073098186778298
+      ]
+    }
+  ],
+  "volume_mm3": 3605.186183933895,
+  "triangles": 4738,
+  "color_change_z_mm": 2,
+  "bounds_mm": [
+    0,
+    0,
+    0,
+    44.5,
+    38.5,
+    3
+  ]
+}
