@@ -61,6 +61,8 @@ test('font, single and double names, 3D views, STL download, persistence and for
 test('fit reports, validation, restored defaults and mobile layout', async ({ page }, testInfo) => {
   await page.goto('/');
   await expect(page.locator('h1')).toHaveText('Mailbox labels');
+  await expect(page.locator('.about-link')).toHaveAttribute('href', 'https://github.com/liyanage/mailbox-label-3dprint-generator#readme');
+  await expect(page.locator('.about-link')).toHaveAttribute('target', '_blank');
   await chooseFont(page);
   await page.locator('#name-one').fill('EXTRA-LONG-EXAMPLE-LABEL');
   await generate(page);
