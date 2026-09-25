@@ -5,4 +5,5 @@ playwright-report/
 .DS_Store
 *.otf
 *.ttf
+!public/fonts/dosis/Dosis-variable.ttf
 *.stl
