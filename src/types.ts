@@ -8,12 +8,13 @@ export interface Settings {
   namePt: number;
   margin: number;
   fit: 'shrink' | 'error';
+  qr: boolean;
 }
 
 export const defaults: Settings = {
   width: 44.5, height: 38.5, radius: 3.465,
   baseThickness: 2, textThickness: 1, numberPt: 50, namePt: 20,
-  margin: 3, fit: 'shrink',
+  margin: 3, fit: 'shrink', qr: true,
 };
 
 export interface LabelInput {
@@ -35,6 +36,7 @@ export interface MeshGeometry {
 }
 
 export interface LabelResult extends MeshGeometry {
+  previewParts: (MeshGeometry & { material: 0 | 1 })[];
   stl: ArrayBuffer;
   threeMf: ArrayBuffer;
   svg: string;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { LabelResult, Settings } from './types.ts';
 
 export class LabelViewer {
@@ -86,22 +87,16 @@ export class LabelViewer {
   }
 
   show(result: LabelResult): void {
-    const indexed = new THREE.BufferGeometry();
-    indexed.setAttribute('position', new THREE.BufferAttribute(result.positions.slice(), 3));
-    indexed.setIndex(new THREE.BufferAttribute(result.indices.slice(), 1));
-    const geometry = indexed.toNonIndexed();
-    indexed.dispose();
-    geometry.computeVertexNormals();
-    const points = geometry.getAttribute('position');
-    const baseFaces: number[] = [], textFaces: number[] = [];
-    // The boolean union has no faces crossing the base/text boundary.
-    for (let i = 0; i < points.count; i += 3) {
-      const white = Math.max(points.getZ(i), points.getZ(i+1), points.getZ(i+2)) > result.settings.baseThickness + 0.00001;
-      (white ? textFaces : baseFaces).push(i, i+1, i+2);
-    }
-    geometry.setIndex([...baseFaces, ...textFaces]);
-    geometry.addGroup(0, baseFaces.length, 0);
-    geometry.addGroup(baseFaces.length, textFaces.length, 1);
+    const parts = result.previewParts.map(part => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(part.positions.slice(), 3));
+      geometry.setIndex(new THREE.BufferAttribute(part.indices.slice(), 1));
+      geometry.computeVertexNormals();
+      return geometry;
+    });
+    const geometry = mergeGeometries(parts, true)!;
+    parts.forEach(part => part.dispose());
+    geometry.groups.forEach((group, i) => { group.materialIndex = result.previewParts[i].material; });
     this.replace(geometry, result.settings);
   }
 

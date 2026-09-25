@@ -60,6 +60,8 @@
                   <label>Name size <span>pt</span><input id="setting-namePt" type="number" value="20" min="4" max="180" step="any" required /></label>
                 </div>
                 <label class="fit-setting" for="setting-fit">Long text<select id="setting-fit"><option value="shrink">Shrink to fit</option><option value="error">Keep size and report overflow</option></select></label>
+                <label class="qr-setting"><input id="setting-qr" type="checkbox" checked /> QR code on back (3MF)</label>
+                <p class="note">35 mm square, 0.2 mm deep. Links to this app.</p>
                 <button id="reset-settings" class="text-button" type="button">Restore default settings</button>
               </div>
             </details>
@@ -80,10 +82,11 @@
               <summary>3D Printing Guidance <span aria-hidden="true">+</span></summary>
               <div class="guidance-content">
                 <p>Use PETG filament.</p>
-                <p>Recommended nozzles: 0.4 mm for the black base and 0.25 mm for the white lettering.</p>
+                <p>Use a 0.1 mm layer height, including the first layer. The 0.2 mm QR inset occupies the first two layers.</p>
+                <p>Recommended nozzles: 0.4 mm for black and 0.25 mm for white lettering and the QR inset.</p>
                 <p>Prefer fonts with rounded shapes. They tend to print more cleanly than fonts with sharp corners.</p>
-                <p id="layer-note">In your slicer, configure a color change at 2 mm, switching to white for the first text layer above the black base.</p>
-                <p>For experimental 3MF, assign black filament to the base and white to the text parts. How the Text group appears depends on your slicer.</p>
+                <p id="layer-note">For STL, configure a color change at 2 mm, switching to white for the first text layer above the black base.</p>
+                <p>For 3MF, assign black to Base and white to Text and QR white. The back-side QR needs both colors in the same layers; a layer-height color change alone cannot print it. STL does not include the QR color pattern.</p>
               </div>
             </details>
             <div class="download-actions">

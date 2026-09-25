@@ -38,7 +38,7 @@ export function inspectThreeMf(bytes) {
       const indices = new Uint32Array([...content.matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"\/>/g)].flatMap(triangle => triangle.slice(1).map(Number)));
       assert.ok(positions.length > 0 && indices.length > 0);
       assert.ok(indices.every(i => i < positions.length/3));
-      geometry = inspectStl(new Uint8Array(binaryStl(positions, indices)));
+      geometry = { ...inspectStl(new Uint8Array(binaryStl(positions, indices))), mesh: { positions, indices } };
     }
     objects.set(id, { name, ...geometry });
   }

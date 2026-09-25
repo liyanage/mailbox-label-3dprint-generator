@@ -2,6 +2,7 @@ import * as hb from 'harfbuzzjs';
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d';
 import type { LabelInput, LabelResult, MeshGeometry, Settings, TextRow } from './types.ts';
 import { threeMf } from './three-mf.ts';
+import { qrContours, QR_DEPTH, QR_SIZE } from './qr.ts';
 
 const PT_TO_MM = 25.4 / 72;
 const TOLERANCE = 0.01;
@@ -107,6 +108,8 @@ function validate({ unit, names, settings: s }: LabelInput): void {
   if ([s.baseThickness, s.textThickness].some(n => n < 0.2 || n > 10)) throw new Error('Thicknesses must be between 0.2 and 10 mm.');
   if ([s.numberPt, s.namePt].some(n => n < 4 || n > 180)) throw new Error('Type sizes must be between 4 and 180 pt.');
   if (!['shrink', 'error'].includes(s.fit)) throw new Error('Choose a valid text-fit option.');
+  if (typeof s.qr !== 'boolean') throw new Error('Choose whether to include the back-side QR code.');
+  if (s.qr && s.baseThickness < QR_DEPTH+0.1-1e-7) throw new Error('The QR inset needs a base at least 0.3 mm thick. Increase the base thickness or turn off the QR code under Advanced.');
 }
 
 function baseContour(s: Settings): Vec2[] {
@@ -195,11 +198,29 @@ export function generateLabel(wasm: ManifoldToplevel, font: FontOutlines, input:
     if (components.length !== 1) throw new Error('Some lettering is disconnected from the base.');
     const textParts = text.decompose();
     textParts.forEach(keep);
+    let blackBase = slab;
+    let qrWhite: Manifold | undefined;
+    if (s.qr) {
+      const contours = qrContours();
+      const square = keep(new wasm.CrossSection([contours.square], 'NonZero'));
+      const place = (shape: CrossSection) => keep(keep(shape.scale(QR_SIZE/contours.size)).translate([(s.width-QR_SIZE)/2, (s.height-QR_SIZE)/2]));
+      if (keep(place(square).subtract(base)).area() > 1e-7) throw new Error('The 35 mm QR code and its border must fit inside the base. Increase the dimensions, reduce the corner radius, or turn off the QR code under Advanced.');
+      // A ~4 micron inset prevents zero-width contacts where black squares meet diagonally.
+      const dark = keep(keep(new wasm.CrossSection(contours.dark, 'NonZero')).offset(-0.005, 'Miter'));
+      // Work in module coordinates, then remove sub-micron slivers before float32 export.
+      qrWhite = keep(keep(place(keep(square.subtract(dark))).extrude(QR_DEPTH)).setTolerance(0.00001));
+      blackBase = keep(keep(slab.subtract(qrWhite)).setTolerance(0.00001));
+      if (blackBase.status() !== 'NoError' || qrWhite.status() !== 'NoError') throw new Error('The QR inset could not be made into closed solids.');
+    }
+    const baseMesh = meshGeometry(blackBase), textMesh = meshGeometry(text);
+    const qrMesh = qrWhite ? meshGeometry(qrWhite) : undefined;
     const { positions, indices } = meshGeometry(solid);
     return { positions, indices, stl: binaryStl(positions, indices),
+      previewParts: [{ ...baseMesh, material: 0 }, { ...textMesh, material: 1 }, ...(qrMesh ? [{ ...qrMesh, material: 1 as const }] : [])],
       threeMf: threeMf([
-        { name: 'Base', ...meshGeometry(slab) },
+        { name: 'Base', ...baseMesh },
         { name: 'Text', children: textParts.map((part, i) => ({ name: `Text ${i+1}`, ...meshGeometry(part) })) },
+        ...(qrMesh ? [{ name: 'QR white', ...qrMesh }] : []),
       ]), svg: svgPreview(base, letters, s),
       rows, settings: { ...s }, volume: solid.volume(), triangles: solid.numTri(), bounds: solid.boundingBox() };
   } finally {

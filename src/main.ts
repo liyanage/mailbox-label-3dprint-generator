@@ -56,7 +56,7 @@ function disableDownloads(disabled: boolean): void {
 function syncPrintingGuidance(): void {
   const height = element<HTMLInputElement>('setting-baseThickness').valueAsNumber;
   const boundary = Number.isFinite(height) && height >= 0.2 && height <= 10 ? `${height} mm` : 'the top of the base';
-  element('layer-note').textContent = `In your slicer, configure a color change at ${boundary}, switching to white for the first text layer above the black base.`;
+  element('layer-note').textContent = `For STL, configure a color change at ${boundary}, switching to white for the first text layer above the black base.`;
 }
 
 function invalidate(): void {
@@ -235,6 +235,7 @@ function inputs(): LabelInput {
   for (const key of Object.keys(defaults) as (keyof Settings)[]) {
     const input = element<HTMLInputElement | HTMLSelectElement>(`setting-${key}`);
     if (key === 'fit') settings.fit = input.value as Settings['fit'];
+    else if (key === 'qr') settings.qr = (input as HTMLInputElement).checked;
     else settings[key] = Number(input.value);
   }
   return { unit: element<HTMLInputElement>('unit').value.trim(),
@@ -283,7 +284,11 @@ download.addEventListener('click', () => downloadLabel('stl'));
 download3mf.addEventListener('click', () => downloadLabel('3mf'));
 
 element('reset-settings').addEventListener('click', () => {
-  for (const [key, value] of Object.entries(defaults)) element<HTMLInputElement | HTMLSelectElement>(`setting-${key}`).value = String(value);
+  for (const [key, value] of Object.entries(defaults)) {
+    const input = element<HTMLInputElement | HTMLSelectElement>(`setting-${key}`);
+    if (typeof value === 'boolean') (input as HTMLInputElement).checked = value;
+    else input.value = String(value);
+  }
   invalidate();
 });
 

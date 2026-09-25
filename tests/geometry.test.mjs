@@ -8,6 +8,9 @@ import { inspectStl } from './stl.mjs';
 import { inspectThreeMf } from './three-mf.mjs';
 import { threeMf } from '../src/three-mf.ts';
 import { bundledFonts } from '../src/fonts.ts';
+import jsQR from 'jsqr';
+import { QR_URL, QR_SIZE, QR_DEPTH, QR_QUIET_ZONE, qrModules } from '../src/qr.ts';
+import { rasterizeQrBack } from './qr.mjs';
 
 const fontPath = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
 const wasm = await initManifold();
@@ -19,10 +22,11 @@ const generate = (unit, names, settings = {}) => generateLabel(wasm, font, { uni
 
 function checkParts(result) {
   const parts = inspectThreeMf(new Uint8Array(result.threeMf));
-  assert.deepEqual(parts.map(part => part.name), ['Base', 'Text']);
+  assert.deepEqual(parts.map(part => part.name), result.settings.qr ? ['Base', 'Text', 'QR white'] : ['Base', 'Text']);
   const boundary = Math.fround(result.settings.baseThickness);
   const top = Math.fround(result.settings.baseThickness+result.settings.textThickness);
-  assert.deepEqual(parts[0].levels, [0, boundary]);
+  assert.deepEqual(parts[0].levels, result.settings.qr ? [0, Math.fround(0.2), boundary] : [0, boundary]);
+  if (result.settings.qr) assert.deepEqual(parts[2].levels, [0, Math.fround(0.2)]);
   assert.deepEqual(parts[1].levels, [boundary, top]);
   assert.ok(!parts[0].children);
   assert.ok(parts[1].children.length > 0);
@@ -127,4 +131,39 @@ test('bundled Dosis uses weight 700 and produces closed single and double-name l
     assert.deepEqual(mesh.max, [44.5, 38.5, 3]);
     checkParts(label);
   }
+});
+
+test('exported QR underside decodes in normal polarity and has disjoint two-layer inlays', () => {
+  const bytes = Uint8Array.from(readFileSync(new URL('../public/fonts/dosis/Dosis-variable.ttf', import.meta.url))).buffer;
+  const font = new FontOutlines(bytes, 700);
+  const input = { unit: '52', names: ['HOPPER'], settings: defaults };
+  const result = generateLabel(wasm, font, input);
+  const parts = inspectThreeMf(new Uint8Array(result.threeMf));
+  const qr = parts[2];
+  assert.equal(qrModules.length, 33);
+  assert.deepEqual(qr.min, [(defaults.width-QR_SIZE)/2, (defaults.height-QR_SIZE)/2, 0]);
+  assert.deepEqual(qr.max, [(defaults.width+QR_SIZE)/2, (defaults.height+QR_SIZE)/2, Math.fround(QR_DEPTH)]);
+  const image = rasterizeQrBack(qr.mesh, defaults);
+  const decoded = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
+  assert.equal(decoded?.data, QR_URL);
+  for (let row = 0; row < 41; row++) for (let col = 0; col < 41; col++) {
+    const dark = qrModules[row-QR_QUIET_ZONE]?.[col-QR_QUIET_ZONE] ?? false;
+    assert.equal(image.data[((row*10+5)*image.width+col*10+5)*4], dark ? 0 : 255);
+  }
+  const fromMesh = mesh => new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices }));
+  const black = fromMesh(parts[0].mesh), white = fromMesh(qr.mesh);
+  const overlap = black.intersect(white), combined = black.add(white);
+  try {
+    assert.equal(black.status(), 'NoError');
+    assert.equal(white.status(), 'NoError');
+    assert.ok(Math.abs(overlap.volume()) < 1e-7);
+    assert.ok(Math.abs(combined.volume()-black.volume()-white.volume()) < 0.001);
+    const without = generateLabel(wasm, font, { ...input, settings: { ...defaults, qr: false } });
+    assert.deepEqual(new Uint8Array(result.stl), new Uint8Array(without.stl));
+    assert.deepEqual(inspectThreeMf(new Uint8Array(without.threeMf)).map(part => part.name), ['Base', 'Text']);
+    assert.equal(without.previewParts.length, 2);
+  } finally { overlap.delete(); combined.delete(); black.delete(); white.delete(); }
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, baseThickness: 0.2 } }), /at least 0.3/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, width: 34 } }), /35 mm QR/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, radius: 19 } }), /35 mm QR/);
 });

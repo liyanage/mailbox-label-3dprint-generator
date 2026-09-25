@@ -3,6 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { inspectStl } from '../stl.mjs';
 import { inspectThreeMf } from '../three-mf.mjs';
+import { PNG } from 'pngjs';
+import jsQR from 'jsqr';
+import { QR_URL } from '../../src/qr.ts';
 
 const font = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
 
@@ -29,9 +32,10 @@ async function download3mf(page: Page, filename: string): Promise<void> {
   const download = await pending;
   expect(download.suggestedFilename()).toBe(filename);
   const parts = inspectThreeMf(await readFile((await download.path())!));
-  expect(parts.map(part => part.name)).toEqual(['Base', 'Text']);
-  expect(parts[0].levels).toEqual([0, 2]);
+  expect(parts.map(part => part.name)).toEqual(['Base', 'Text', 'QR white']);
+  expect(parts[0].levels).toEqual([0, Math.fround(0.2), 2]);
   expect(parts[1].levels).toEqual([2, 3]);
+  expect(parts[2].levels).toEqual([0, Math.fround(0.2)]);
 }
 
 test('font, single and double names, 3D views, STL and 3MF downloads, persistence and forgetting', async ({ page }, testInfo) => {
@@ -178,4 +182,39 @@ test('included font download errors allow retry', async ({ page }) => {
   await page.locator('#retry-font').click();
   await expect(page.locator('#generate')).toBeEnabled();
   await generate(page);
+});
+
+test('back-side QR preview scans, can be disabled, and printing guidance specifies two layers', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.locator('#source-included').click();
+  await generate(page);
+  const canvas = page.locator('canvas');
+  const box = (await canvas.boundingBox())!;
+  const start = { x: box.x+box.width/4, y: box.y+box.height/2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x+box.height/2, start.y, { steps: 30 });
+  await page.mouse.up();
+  await expect.poll(async () => {
+    const png = PNG.sync.read(await canvas.screenshot());
+    return jsQR(new Uint8ClampedArray(png.data), png.width, png.height, { inversionAttempts: 'dontInvert' })?.data;
+  }).toBe(QR_URL);
+  await page.screenshot({ path: testInfo.outputPath('qr-back-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: testInfo.outputPath('qr-back-mobile.png'), fullPage: true });
+  await page.locator('.printing-guidance summary').click();
+  await expect(page.locator('.guidance-content')).toContainText('0.1 mm layer height, including the first layer');
+  await expect(page.locator('.guidance-content')).toContainText('first two layers');
+  await page.locator('.advanced summary').click();
+  await page.locator('#setting-qr').uncheck();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
+  await generate(page);
+  const pending = page.waitForEvent('download');
+  await page.locator('#download-3mf').click();
+  const file = await pending;
+  const parts = inspectThreeMf(await readFile((await file.path())!));
+  expect(parts.map(part => part.name)).toEqual(['Base', 'Text']);
+  await page.locator('#reset-settings').click();
+  await expect(page.locator('#setting-qr')).toBeChecked();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
 });
