@@ -5,7 +5,6 @@ import { inspectStl } from '../stl.mjs';
 import { inspectThreeMf } from '../three-mf.mjs';
 
 const font = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
-test.skip(!existsSync(font), 'Set MAILBOX_TEST_FONT to SF-Pro-Rounded-Bold.otf.');
 
 async function chooseFont(page: Page): Promise<void> {
   await page.locator('#font-file').setInputFiles(font);
@@ -16,6 +15,12 @@ async function generate(page: Page): Promise<void> {
   await page.locator('#generate').click();
   await expect(page.locator('#download')).toBeEnabled();
   await expect(page.locator('#download-3mf')).toBeEnabled();
+}
+
+async function reloadAfterFontSettles(page: Page): Promise<void> {
+  await expect(page.locator('#generate')).toHaveAttribute('aria-busy', 'false');
+  await page.reload();
+  await expect(page.locator('#generate')).toHaveAttribute('aria-busy', 'false');
 }
 
 async function download3mf(page: Page, filename: string): Promise<void> {
@@ -30,6 +35,7 @@ async function download3mf(page: Page, filename: string): Promise<void> {
 }
 
 test('font, single and double names, 3D views, STL and 3MF downloads, persistence and forgetting', async ({ page }, testInfo) => {
+  test.skip(!existsSync(font), 'Set MAILBOX_TEST_FONT to SF-Pro-Rounded-Bold.otf.');
   const errors: string[] = [], remoteRequests: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => { if (/^https?:/.test(request.url()) && !request.url().startsWith('http://127.0.0.1:4173/')) remoteRequests.push(request.url()); });
@@ -60,17 +66,23 @@ test('font, single and double names, 3D views, STL and 3MF downloads, persistenc
   expect(mesh.levels).toEqual([0, 2, 3]);
   expect(mesh.triangles).toBe(3608);
   expect(Math.abs(mesh.volume-3629.5786221163767)).toBeLessThan(0.001);
+  await page.locator('#source-included').click();
+  await expect(page.locator('#generate')).toBeEnabled();
+  await expect(page.locator('#download')).toBeDisabled();
+  await page.locator('#source-upload').click();
+  await expect(page.locator('#generate')).toBeEnabled();
+  await expect(page.locator('#font-name')).toHaveText('SF-Pro-Rounded-Bold.otf');
   const box = (await page.locator('canvas').boundingBox())!;
   await page.mouse.move(box.x+box.width/2, box.y+box.height/2);
   await page.mouse.down(); await page.mouse.move(box.x+box.width/2+90, box.y+box.height/2+30, { steps: 12 }); await page.mouse.up();
   await page.locator('#reset-view').click();
-  await page.reload();
+  await reloadAfterFontSettles(page);
   await expect(page.locator('#font-name')).toHaveText('SF-Pro-Rounded-Bold.otf');
   await expect(page.locator('#generate')).toBeEnabled();
   await page.locator('#forget-font').click();
   await expect(page.locator('#download-3mf')).toBeDisabled();
   await expect(page.locator('#font-name')).toHaveText('No font selected');
-  await page.reload();
+  await reloadAfterFontSettles(page);
   await expect(page.locator('#generate')).toBeDisabled();
   await expect(page.locator('#font-name')).toHaveText('No font selected');
   expect(errors).toEqual([]);
@@ -78,6 +90,7 @@ test('font, single and double names, 3D views, STL and 3MF downloads, persistenc
 });
 
 test('fit reports, validation, restored defaults and mobile layout', async ({ page }, testInfo) => {
+  test.skip(!existsSync(font), 'Set MAILBOX_TEST_FONT to SF-Pro-Rounded-Bold.otf.');
   await page.goto('/');
   await expect(page.locator('h1')).toHaveText('Mailbox labels');
   await expect(page.locator('.about-link')).toHaveAttribute('href', 'https://github.com/liyanage/mailbox-label-3dprint-generator#readme');
@@ -118,5 +131,51 @@ test('fit reports, validation, restored defaults and mobile layout', async ({ pa
   await expect(page.locator('#status')).toContainText('OpenType');
   await expect(page.locator('#generate')).toBeDisabled();
   await chooseFont(page);
+  await generate(page);
+});
+
+test('included font downloads, source persistence, and mobile selection without uploading', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('#source-upload')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#included-font-panel')).toBeHidden();
+  await page.locator('#source-included').click();
+  await expect(page.locator('#included-font')).toHaveValue('dosis-700');
+  await expect(page.locator('#upload-font-panel')).toBeHidden();
+  await expect(page.locator('#generate')).toBeEnabled();
+  await generate(page);
+  await download3mf(page, '52-hopper.3mf');
+  const pending = page.waitForEvent('download');
+  await page.locator('#download').click();
+  const download = await pending;
+  const mesh = inspectStl(await readFile((await download.path())!));
+  expect(mesh.max).toEqual([44.5, 38.5, 3]);
+  await page.screenshot({ path: testInfo.outputPath('included-desktop.png'), fullPage: true });
+  await reloadAfterFontSettles(page);
+  await expect(page.locator('#source-included')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#generate')).toBeEnabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await generate(page);
+  await page.screenshot({ path: testInfo.outputPath('included-mobile.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#source-upload').click();
+  await expect(page.locator('#generate')).toBeDisabled();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
+  await expect(page.locator('#font-name')).toHaveText('No font selected');
+  await reloadAfterFontSettles(page);
+  await expect(page.locator('#source-upload')).toHaveAttribute('aria-pressed', 'true');
+  expect(errors).toEqual([]);
+});
+
+test('included font download errors allow retry', async ({ page }) => {
+  await page.goto('/');
+  await page.route('**/fonts/dosis/*.ttf', route => route.fulfill({ status: 503, body: 'Unavailable' }));
+  await page.locator('#source-included').click();
+  await expect(page.locator('#status')).toContainText('Font download failed (503)');
+  await expect(page.locator('#generate')).toBeDisabled();
+  await page.unroute('**/fonts/dosis/*.ttf');
+  await page.locator('#retry-font').click();
+  await expect(page.locator('#generate')).toBeEnabled();
   await generate(page);
 });

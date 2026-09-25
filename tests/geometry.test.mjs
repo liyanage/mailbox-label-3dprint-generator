@@ -7,6 +7,7 @@ import { defaults } from '../src/types.ts';
 import { inspectStl } from './stl.mjs';
 import { inspectThreeMf } from './three-mf.mjs';
 import { threeMf } from '../src/three-mf.ts';
+import { bundledFonts } from '../src/fonts.ts';
 
 const fontPath = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
 const wasm = await initManifold();
@@ -92,4 +93,20 @@ test('3MF packages any number of named closed parts without printer settings', (
   const parts = inspectThreeMf(new Uint8Array(threeMf(['Base', 'Text', 'A & "B"'].map(name => ({ name, ...tetrahedron })))));
   assert.deepEqual(parts.map(part => part.name), ['Base', 'Text', 'A &amp; &quot;B&quot;']);
   for (const part of parts) assert.ok(Math.abs(part.volume-1/6) < 1e-9);
+});
+
+test('bundled Dosis uses weight 700 and produces closed single and double-name labels', () => {
+  const bundled = bundledFonts.find(font => font.id === 'dosis-700');
+  assert.equal(bundled.weight, 700);
+  const bytes = Uint8Array.from(readFileSync(new URL(`../public/${bundled.path}`, import.meta.url))).buffer;
+  const bold = new FontOutlines(bytes, bundled.weight);
+  const regular = new FontOutlines(bytes, 400);
+  const input = { unit: '52', names: ['HOPPER'], settings: defaults };
+  const result = generateLabel(wasm, bold, input);
+  assert.ok(result.volume > generateLabel(wasm, regular, input).volume);
+  for (const label of [result, generateLabel(wasm, bold, { ...input, unit: '83', names: ['THOMPSON', 'RITCHIE'] })]) {
+    const mesh = inspectStl(new Uint8Array(label.stl));
+    assert.deepEqual(mesh.max, [44.5, 38.5, 3]);
+    checkParts(label);
+  }
 });

@@ -18,10 +18,23 @@
         <div class="editor">
           <section class="font-section" aria-labelledby="font-heading">
             <div class="section-heading"><h2 id="font-heading">Font</h2></div>
-            <p id="font-name" class="font-name">No font selected</p>
-            <div class="font-actions"><button id="choose-font" class="button-small" type="button">Choose font</button><button id="forget-font" class="text-button" type="button" hidden>Forget font</button></div>
-            <input id="font-file" type="file" accept=".otf,.ttf" aria-label="Choose font file" hidden />
-            <p id="font-note" class="note">Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.</p>
+            <div class="font-source" role="group" aria-label="Font source">
+              <button id="source-upload" type="button" aria-pressed="true">Upload your own</button>
+              <button id="source-included" type="button" aria-pressed="false">Included fonts</button>
+            </div>
+            <div id="upload-font-panel">
+              <p id="font-name" class="font-name">No font selected</p>
+              <div class="font-actions"><button id="choose-font" class="button-small" type="button">Choose font</button><button id="forget-font" class="text-button" type="button" hidden>Forget font</button></div>
+              <input id="font-file" type="file" accept=".otf,.ttf" aria-label="Choose font file" hidden />
+              <p id="font-note" class="note">Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.</p>
+              <p class="note font-hint">On iPhone or iPad, try Included fonts.</p>
+            </div>
+            <div id="included-font-panel" hidden>
+              <label class="included-font-label" for="included-font">Typeface</label>
+              <select id="included-font"></select>
+              <button id="retry-font" class="text-button" type="button" hidden>Retry loading font</button>
+            </div>
+            <p id="font-storage-note" class="note font-hint" hidden></p>
           </section>
           <form id="label-form">
             <div class="text-fields">

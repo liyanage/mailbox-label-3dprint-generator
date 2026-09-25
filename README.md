@@ -29,16 +29,18 @@ The build produces a self-contained `dist/` folder suitable for a static web hos
 The app is published at <https://liyanage.github.io/mailbox-label-3dprint-generator/>.
 The deployment workflow builds and publishes `dist/` on every push to `main`, or when run manually from the Actions tab. Pages uses GitHub Actions as its publishing source. Relative asset URLs allow the same build to work locally and under the repository URL.
 
-The workflow uses Node.js 24 and installs locked dependencies with `npm ci`. Font-dependent tests are skipped on GitHub because the font is not distributed; run them locally before publishing changes to the geometry.
+The workflow uses Node.js 24 and installs locked dependencies with `npm ci`. Dosis geometry tests run on GitHub. Tests requiring SF Pro Rounded are skipped there because that font is not distributed; run them locally before publishing changes to the geometry.
 
 ## Make a label
 
-1. Choose **SF-Pro-Rounded-Bold.otf** from your computer. The font is not bundled. On macOS it may be installed in `/Library/Fonts/`.
+1. **Upload your own** is selected initially. Choose **SF-Pro-Rounded-Bold.otf** from your computer (on macOS, `/Library/Fonts/SF-Pro-Rounded-Bold.otf`). Alternatively, select **Included fonts** and choose **Dosis — Bold (700)**, especially on iPhone or iPad where uploading a font is less convenient.
 2. Enter the unit number and name. Select **Add a second name** for a second line. Case, spaces, and accents are preserved when the font supports them.
 3. Select **Generate label**. Drag the preview to rotate, scroll to zoom, or select **Reset** to return to the starting angle.
 4. Select **Download STL** for a single solid with a layer-height color change, or **Download 3MF** for separate **Base** and **Text** parts in PrusaSlicer.
 
-The browser remembers the selected font in IndexedDB for this site. **Forget font** removes that copy. Clearing site data also removes it. If browser storage is unavailable, the font can still be used for the current visit. Names are not saved between visits.
+The browser remembers the selected font source, included typeface, and uploaded font in IndexedDB for this site. Switching to Included fonts keeps your uploaded font available when you switch back. **Forget font** removes the uploaded copy. Clearing site data also removes these preferences. If browser storage is unavailable, fonts can still be used for the current visit. Names are not saved between visits.
+
+Dosis is bundled with the app under the [SIL Open Font License 1.1](public/fonts/dosis/OFL.txt); its [source and attribution](public/fonts/dosis/README.md) are included. The original variable font is used at weight 700 when generating outlines. SF Pro Rounded is not bundled. Included fonts are served from the app itself, with no third-party font service.
 
 Dimensions, thicknesses, typography, corner radius, margins, and long-text fitting are under **Advanced**. Editing an input disables the old download until you generate again. Unsupported characters, text extending beyond the base, and overlapping rows produce an error.
 
@@ -91,11 +93,11 @@ Width and Height under Advanced as needed.
 - **Manifold / WebAssembly** builds filled 2D regions with letter counters, extrudes the base and lettering, and combines them into one closed solid.
 - A **Web Worker** handles font processing and geometry so the interface remains responsive.
 - **Three.js** renders the actual generated mesh with orbit controls and a preview of the color-change layers. A flat outline preview is available when WebGL is unavailable.
-- A small binary STL writer exports the same mesh shown in the preview. The 3MF writer retains the separate closed volumes and their names, using **fflate** to package the XML and meshes into a ZIP archive. **IndexedDB** stores only the chosen font.
+- A small binary STL writer exports the same mesh shown in the preview. The 3MF writer retains the separate closed volumes and their names, using **fflate** to package the XML and meshes into a ZIP archive. **IndexedDB** stores the uploaded font and font-selection preferences. `src/fonts.ts` lists included fonts and their outline weights; add entries there to offer more typefaces.
 
 ## Verification
 
-Geometry tests require your own SF Pro Rounded Bold file. They use `/Library/Fonts/SF-Pro-Rounded-Bold.otf` by default; set `MAILBOX_TEST_FONT` for another location.
+SF Pro Rounded geometry tests require your own font file. They use `/Library/Fonts/SF-Pro-Rounded-Bold.otf` by default; set `MAILBOX_TEST_FONT` for another location. Bundled Dosis tests need no additional font.
 
 ```sh
 npm test
@@ -106,6 +108,6 @@ npm run test:browser
 
 For an already installed Chromium-based browser, set `PLAYWRIGHT_EXECUTABLE_PATH` to its executable instead of installing Playwright's browser. Geometry and browser tests that require the font are explicitly skipped when it is unavailable.
 
-The checks cover reference dimensions and lettering placement, closed edges, face orientation, volume, extrusion heights, counters in the digit 8, long-text fitting, accents, and invalid input. 3MF checks cover archive structure, part grouping, closed meshes, preserved heights, and agreement with the STL volume. Browser checks exercise font selection and persistence, both name layouts, preview controls, stale-download prevention, errors, mobile layout, and inspect both downloaded formats. No font file is included in the repository.
+The checks cover reference dimensions and lettering placement, closed edges, face orientation, volume, extrusion heights, counters in the digit 8, long-text fitting, accents, and invalid input. Dosis tests also verify weight 700 affects the outlines. 3MF checks cover archive structure, part grouping, closed meshes, preserved heights, and agreement with the STL volume. Browser checks exercise uploaded and included fonts, source switching and persistence, both name layouts, preview controls, stale-download prevention, errors, mobile layout, and both downloaded formats.
 
 A slicer preview and a physical test print remain the final checks for your printer and mailbox.

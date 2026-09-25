@@ -1,8 +1,9 @@
 import './style.css';
 import { defaults } from './types.ts';
 import type { EngineRequest, EngineResponse, LabelInput, LabelResult, Settings } from './types.ts';
-import { readFont, saveFont, forgetFont } from './storage.ts';
+import { readFont, saveFont, forgetFont, readFontSelection, saveFontSelection } from './storage.ts';
 import type { SavedFont } from './storage.ts';
+import { bundledFonts, defaultFontSelection } from './fonts.ts';
 import { LabelViewer } from './viewer.ts';
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -13,6 +14,14 @@ const download3mf = element<HTMLButtonElement>('download-3mf');
 const fileInput = element<HTMLInputElement>('font-file');
 const choose = element<HTMLButtonElement>('choose-font');
 const forget = element<HTMLButtonElement>('forget-font');
+const sourceUpload = element<HTMLButtonElement>('source-upload');
+const sourceIncluded = element<HTMLButtonElement>('source-included');
+const includedFont = element<HTMLSelectElement>('included-font');
+const retryFont = element<HTMLButtonElement>('retry-font');
+let fontSelection = { ...defaultFontSelection };
+let uploadedFont: SavedFont | undefined;
+let uploadSaved = false;
+for (const font of bundledFonts) includedFont.add(new Option(font.label, font.id));
 const status = element<HTMLParagraphElement>('status');
 const stage = element<HTMLDivElement>('stage');
 let viewer: LabelViewer | undefined;
@@ -37,6 +46,7 @@ function syncButtons(): void {
   generate.setAttribute('aria-busy', String(busy));
   choose.disabled = busy;
   forget.disabled = busy;
+  sourceUpload.disabled = sourceIncluded.disabled = includedFont.disabled = retryFont.disabled = busy;
 }
 
 function disableDownloads(disabled: boolean): void {
@@ -94,56 +104,107 @@ function send(request: Omit<Extract<EngineRequest, { kind: 'font' }>, 'id'> | Om
   });
 }
 
-async function loadFont(font: SavedFont, persist: boolean): Promise<void> {
+function renderFontChoice(): void {
+  const uploading = fontSelection.source === 'upload';
+  sourceUpload.setAttribute('aria-pressed', String(uploading));
+  sourceIncluded.setAttribute('aria-pressed', String(!uploading));
+  element('upload-font-panel').hidden = !uploading;
+  element('included-font-panel').hidden = uploading;
+  includedFont.value = fontSelection.bundledId;
+  element('font-name').textContent = uploadedFont?.name ?? 'No font selected';
+  choose.textContent = uploadedFont ? 'Change font' : 'Choose font';
+  forget.hidden = !uploadedFont;
+  element('font-note').textContent = uploadedFont
+    ? (uploadSaved ? 'Saved in this browser.' : 'Ready for this visit.')
+    : 'Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.';
+}
+
+function storageUnavailable(): void {
+  element('font-storage-note').hidden = false;
+  element('font-storage-note').textContent = 'Browser storage is unavailable. Font choices apply to this visit only.';
+}
+
+async function activateFont(persist: boolean, newUpload?: SavedFont): Promise<void> {
   busy = true; fontReady = false; syncButtons(); invalidate();
+  renderFontChoice();
+  retryFont.hidden = true;
   notify('Reading font…');
   stopWorker();
   try {
-    await send({ kind: 'font', bytes: font.bytes });
-    fontReady = true;
-    element('font-name').textContent = font.name;
-    element('font-note').textContent = 'Saved in this browser.';
-    choose.textContent = 'Change font';
-    forget.hidden = false;
     if (persist) {
-      try { await saveFont(font); }
-      catch { element('font-note').textContent = 'Ready for this visit. Browser storage is unavailable.'; }
+      try { await saveFontSelection(fontSelection); }
+      catch { storageUnavailable(); }
     }
+    let font = newUpload ?? uploadedFont;
+    let weight: number | undefined;
+    if (fontSelection.source === 'included') {
+      const bundled = bundledFonts.find(font => font.id === fontSelection.bundledId)!;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(`${import.meta.env.BASE_URL}${bundled.path}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Font download failed (${response.status}).`);
+        font = { name: bundled.label, bytes: await response.arrayBuffer() };
+        weight = bundled.weight;
+      } finally { clearTimeout(timeout); }
+    }
+    if (!font) { notify(''); return; }
+    await send({ kind: 'font', bytes: font.bytes, weight });
+    fontReady = true;
+    if (newUpload) {
+      uploadedFont = newUpload;
+      uploadSaved = false;
+      try { await saveFont(newUpload); uploadSaved = true; }
+      catch { storageUnavailable(); }
+    }
+    renderFontChoice();
     notify('');
   } catch (error) {
     stopWorker();
-    element('font-name').textContent = 'Choose an outline font';
-    element('font-note').textContent = 'Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.';
-    choose.textContent = 'Choose font';
+    retryFont.hidden = fontSelection.source !== 'included';
     notify(error instanceof Error ? error.message : 'This font could not be read.', true);
   } finally { busy = false; syncButtons(); }
 }
+
+for (const [button, source] of [[sourceUpload, 'upload'], [sourceIncluded, 'included']] as const) {
+  button.addEventListener('click', async () => {
+    if (busy || fontSelection.source === source) return;
+    fontSelection.source = source;
+    await activateFont(true);
+  });
+}
+includedFont.addEventListener('change', async () => {
+  fontSelection.bundledId = includedFont.value;
+  await activateFont(true);
+});
+retryFont.addEventListener('click', () => activateFont(false));
 
 choose.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   fileInput.value = '';
-  if (!file) return;
+  if (!file || busy) return;
   if (file.size > 30*1024*1024) { notify('Choose a font smaller than 30 MB.', true); return; }
-  try { await loadFont({ name: file.name, bytes: await file.arrayBuffer() }, true); }
+  busy = true; syncButtons();
+  try { await activateFont(true, { name: file.name, bytes: await file.arrayBuffer() }); }
   catch { notify('The selected file could not be read. Choose it again.', true); }
+  finally { busy = false; syncButtons(); }
 });
 
 forget.addEventListener('click', async () => {
+  busy = true; syncButtons();
   fontReady = false; invalidate(); stopWorker();
+  uploadedFont = undefined; uploadSaved = false;
   result = null; generatedInput = null;
   viewer?.showBase(defaults);
   element('fallback-preview').replaceChildren();
-  element('font-name').textContent = 'No font selected';
-  choose.textContent = 'Choose font';
-  forget.hidden = true;
-  element('font-note').textContent = 'Use /Library/Fonts/SF-Pro-Rounded-Bold.otf.';
+  renderFontChoice();
   stage.classList.remove('stale');
   element('fit-note').textContent = '';
   element('dimensions').textContent = '44.5 × 38.5 × 3 mm';
   try { await forgetFont(); notify(''); }
   catch { forget.hidden = false; notify('The font was cleared from this page, but browser storage could not be cleared. Try Forget font again or clear this site’s data.', true); }
-  syncButtons();
+  busy = false; syncButtons();
 });
 
 element('add-name').addEventListener('click', () => {
@@ -236,8 +297,12 @@ catch {
 
 element('reset-view').addEventListener('click', () => viewer?.reset());
 
-syncButtons();
+busy = true; syncButtons();
 try {
-  const font = await readFont();
-  if (font && !fontReady && !busy) await loadFont(font, false);
-} catch { element('font-note').textContent = 'Choose a font for this visit. Browser storage is unavailable.'; }
+  const [font, selection] = await Promise.all([readFont(), readFontSelection()]);
+  uploadedFont = font; uploadSaved = !!font;
+  if (selection && ['upload', 'included'].includes(selection.source) && bundledFonts.some(font => font.id === selection.bundledId)) fontSelection = selection;
+  renderFontChoice();
+  await activateFont(false);
+} catch { storageUnavailable(); }
+finally { busy = false; syncButtons(); }

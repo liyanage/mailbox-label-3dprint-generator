@@ -32,7 +32,7 @@ export class FontOutlines {
   private font: hb.Font;
   private buffer = new hb.Buffer();
 
-  constructor(bytes: ArrayBuffer) {
+  constructor(bytes: ArrayBuffer, weight?: number) {
     const signature = new DataView(bytes);
     if (bytes.byteLength < 12 || ![0x4f54544f, 0x00010000, 0x74727565].includes(signature.getUint32(0))) {
       throw new Error('Choose an OpenType (.otf) or TrueType (.ttf) font file.');
@@ -44,6 +44,7 @@ export class FontOutlines {
     }
     this.font = new hb.Font(this.face);
     this.font.setScale(this.face.upem, this.face.upem);
+    if (weight !== undefined) this.font.setVariations([new hb.Variation('wght', weight)]);
   }
 
   contours(text: string, size: number): Vec2[][] {

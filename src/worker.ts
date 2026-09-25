@@ -15,7 +15,7 @@ self.onmessage = async ({ data }: MessageEvent<EngineRequest>) => {
   try {
     const [wasm, { FontOutlines, generateLabel }] = await enginePromise;
     if (data.kind === 'font') {
-      font = new FontOutlines(data.bytes);
+      font = new FontOutlines(data.bytes, data.weight);
       self.postMessage({ id: data.id, ok: true, result: null } satisfies EngineResponse);
     } else {
       if (!font) throw new Error('Choose a font before generating a label.');

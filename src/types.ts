@@ -46,7 +46,7 @@ export interface LabelResult extends MeshGeometry {
 }
 
 export type EngineRequest =
-  | { id: number; kind: 'font'; bytes: ArrayBuffer }
+  | { id: number; kind: 'font'; bytes: ArrayBuffer; weight?: number }
   | { id: number; kind: 'generate'; input: LabelInput };
 
 export type EngineResponse =

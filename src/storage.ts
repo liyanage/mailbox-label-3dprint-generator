@@ -1,3 +1,4 @@
+import type { FontSelection } from './fonts.ts';
 export interface SavedFont { name: string; bytes: ArrayBuffer }
 const DB = 'mailbox-labels';
 
@@ -24,3 +25,5 @@ async function transaction<T>(mode: IDBTransactionMode, action: (store: IDBObjec
 export const readFont = (): Promise<SavedFont | undefined> => transaction('readonly', store => store.get('font'));
 export const saveFont = (font: SavedFont) => transaction('readwrite', store => store.put(font, 'font'));
 export const forgetFont = () => transaction('readwrite', store => store.delete('font'));
+export const readFontSelection = (): Promise<FontSelection | undefined> => transaction('readonly', store => store.get('font-selection'));
+export const saveFontSelection = (selection: FontSelection) => transaction('readwrite', store => store.put(selection, 'font-selection'));
