@@ -146,9 +146,12 @@ test('exported QR underside decodes in normal polarity and has disjoint two-laye
   const image = rasterizeQrBack(qr.mesh, defaults);
   const decoded = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
   assert.equal(decoded?.data, QR_URL);
-  for (let row = 0; row < 41; row++) for (let col = 0; col < 41; col++) {
+  const side = qrModules.length+2*QR_QUIET_ZONE;
+  const modulePixels = image.width/side;
+  for (let row = 0; row < side; row++) for (let col = 0; col < side; col++) {
     const dark = qrModules[row-QR_QUIET_ZONE]?.[col-QR_QUIET_ZONE] ?? false;
-    assert.equal(image.data[((row*10+5)*image.width+col*10+5)*4], dark ? 0 : 255);
+    const x = Math.floor((col+0.5)*modulePixels), y = Math.floor((row+0.5)*modulePixels);
+    assert.equal(image.data[(y*image.width+x)*4], dark ? 0 : 255);
   }
   const fromMesh = mesh => new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices }));
   const black = fromMesh(parts[0].mesh), white = fromMesh(qr.mesh);
@@ -164,6 +167,6 @@ test('exported QR underside decodes in normal polarity and has disjoint two-laye
     assert.equal(without.previewParts.length, 2);
   } finally { overlap.delete(); combined.delete(); black.delete(); white.delete(); }
   assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, baseThickness: 0.2 } }), /at least 0.3/);
-  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, width: 34 } }), /36.9 mm QR/);
-  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, radius: 19 } }), /36.9 mm QR/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, width: 34 } }), /35.1 mm QR/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, radius: 19 } }), /35.1 mm QR/);
 });

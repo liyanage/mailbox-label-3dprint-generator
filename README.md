@@ -59,7 +59,7 @@ Long text shrinks proportionally to the available width by default; the app repo
 | Names | SF Pro Rounded Bold, 20 pt |
 | Side margin | 3 mm |
 | Curve approximation tolerance | 0.01 mm |
-| Back-side QR (3MF) | Enabled; 36.9 mm square including quiet zone, 0.2 mm deep |
+| Back-side QR (3MF) | Enabled; 35.1 mm square including quiet zone, 0.2 mm deep |
 
 Use PETG with a **0.1 mm layer height, including the first layer**. Recommended nozzles are 0.4 mm for black and 0.25 mm for white lettering and the QR inset. Rounded fonts tend to print more cleanly than fonts with sharp corners.
 
@@ -83,9 +83,9 @@ Each Text child is a separate connected solid from the lettering, including the 
 
 With a multi-material printer profile, assign **black to Base** and **white to Text and QR white** (or their individual parts, depending on how your slicer exposes the hierarchy). The file uses nested 3MF components and omits flat PrusaSlicer metadata; its UI hierarchy behavior has not been verified. It does not set filaments, printer profiles, or slicing settings.
 
-The QR links directly to <https://liyanage.github.io/mailbox-label-3dprint-generator/> with no redirect service. It uses black squares on a white background, version 4 with medium error correction: 33 × 33 modules plus a four-module white quiet zone on every side. The 36.9 mm footprint gives 0.9 mm modules, a small increase from the original 0.854 mm to test whether the white squares fill more evenly with a 0.25 mm nozzle. Actual extrusion width depends on the slicer profile, so this is an experiment, not a guaranteed improvement. QR white is flush with the underside at Z = 0 and extends to Z = 0.2 mm, replacing that region of the black base without overlapping it. The code is oriented to read from underneath; rotate the preview to inspect it.
+The QR links directly to <https://liyanage.github.io/mailbox-label-3dprint-generator/> with no redirect service. It uses black squares on a white background, version 4 with medium error correction: 33 × 33 modules plus a three-module white quiet zone on every side. The 35.1 mm footprint keeps each module at 0.9 mm for the 0.25 mm white nozzle while reducing the white border from 3.6 to 2.7 mm per side. [The QR standard calls for four modules](https://www.qrcode.com/en/howto/code.html), so check scanning on a physical print. Actual extrusion width depends on the slicer profile. QR white is flush with the underside at Z = 0 and extends to Z = 0.2 mm, replacing that region of the black base without overlapping it. The code is oriented to read from underneath; rotate the preview to inspect it.
 
-At 0.1 mm layers the inset occupies the first two layers and needs black and white in each, so a layer-height color change alone is insufficient. Test-print to check white opacity, first-layer detail, and phone scanning. The 36.9 mm square must fit inside the base, including its rounded corners, and the base must be at least 0.3 mm thick. Turn off **QR code on back — links to this app (3MF)** under Advanced for smaller labels or an unmarked back.
+At 0.1 mm layers the inset occupies the first two layers and needs black and white in each, so a layer-height color change alone is insufficient. Test-print to check white opacity, first-layer detail, and phone scanning. The 35.1 mm square must fit inside the base, including its rounded corners, and the base must be at least 0.3 mm thick. Turn off **QR code on back — links to this app (3MF)** under Advanced for smaller labels or an unmarked back.
 
 ## Mailbox compatibility
 

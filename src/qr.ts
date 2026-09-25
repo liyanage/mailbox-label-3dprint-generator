@@ -2,9 +2,9 @@ import qrcode from 'qrcode-generator';
 import type { Vec2 } from 'manifold-3d';
 
 export const QR_URL = 'https://liyanage.github.io/mailbox-label-3dprint-generator/';
-export const QR_SIZE = 36.9;
+export const QR_SIZE = 35.1;
 export const QR_DEPTH = 0.2;
-export const QR_QUIET_ZONE = 4;
+export const QR_QUIET_ZONE = 3;
 
 const code = qrcode(4, 'M');
 code.addData(QR_URL, 'Byte');
