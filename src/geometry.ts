@@ -204,7 +204,7 @@ export function generateLabel(wasm: ManifoldToplevel, font: FontOutlines, input:
       const contours = qrContours();
       const square = keep(new wasm.CrossSection([contours.square], 'NonZero'));
       const place = (shape: CrossSection) => keep(keep(shape.scale(QR_SIZE/contours.size)).translate([(s.width-QR_SIZE)/2, (s.height-QR_SIZE)/2]));
-      if (keep(place(square).subtract(base)).area() > 1e-7) throw new Error('The 35 mm QR code and its border must fit inside the base. Increase the dimensions, reduce the corner radius, or turn off the QR code under Advanced.');
+      if (keep(place(square).subtract(base)).area() > 1e-7) throw new Error(`The ${QR_SIZE} mm QR code and its border must fit inside the base. Increase the dimensions, reduce the corner radius, or turn off the QR code under Advanced.`);
       // A ~4 micron inset prevents zero-width contacts where black squares meet diagonally.
       const dark = keep(keep(new wasm.CrossSection(contours.dark, 'NonZero')).offset(-0.005, 'Miter'));
       // Work in module coordinates, then remove sub-micron slivers before float32 export.

@@ -1,4 +1,6 @@
-export function rasterizeQrBack(mesh, settings, size = 35, pixels = 410) {
+import { QR_SIZE } from '../src/qr.ts';
+
+export function rasterizeQrBack(mesh, settings, size = QR_SIZE, pixels = 410) {
   const data = new Uint8ClampedArray(pixels*pixels*4);
   for (let i = 3; i < data.length; i += 4) data[i] = 255;
   const left = (settings.width-size)/2, bottom = (settings.height-size)/2;

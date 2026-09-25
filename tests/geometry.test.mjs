@@ -141,8 +141,8 @@ test('exported QR underside decodes in normal polarity and has disjoint two-laye
   const parts = inspectThreeMf(new Uint8Array(result.threeMf));
   const qr = parts[2];
   assert.equal(qrModules.length, 33);
-  assert.deepEqual(qr.min, [(defaults.width-QR_SIZE)/2, (defaults.height-QR_SIZE)/2, 0]);
-  assert.deepEqual(qr.max, [(defaults.width+QR_SIZE)/2, (defaults.height+QR_SIZE)/2, Math.fround(QR_DEPTH)]);
+  assert.deepEqual(qr.min, [Math.fround((defaults.width-QR_SIZE)/2), Math.fround((defaults.height-QR_SIZE)/2), 0]);
+  assert.deepEqual(qr.max, [Math.fround((defaults.width+QR_SIZE)/2), Math.fround((defaults.height+QR_SIZE)/2), Math.fround(QR_DEPTH)]);
   const image = rasterizeQrBack(qr.mesh, defaults);
   const decoded = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
   assert.equal(decoded?.data, QR_URL);
@@ -164,6 +164,6 @@ test('exported QR underside decodes in normal polarity and has disjoint two-laye
     assert.equal(without.previewParts.length, 2);
   } finally { overlap.delete(); combined.delete(); black.delete(); white.delete(); }
   assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, baseThickness: 0.2 } }), /at least 0.3/);
-  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, width: 34 } }), /35 mm QR/);
-  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, radius: 19 } }), /35 mm QR/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, width: 34 } }), /36.9 mm QR/);
+  assert.throws(() => generateLabel(wasm, font, { ...input, settings: { ...defaults, radius: 19 } }), /36.9 mm QR/);
 });
