@@ -9,6 +9,7 @@ const element = <T extends HTMLElement>(id: string) => document.getElementById(i
 const form = element<HTMLFormElement>('label-form');
 const generate = element<HTMLButtonElement>('generate');
 const download = element<HTMLButtonElement>('download');
+const download3mf = element<HTMLButtonElement>('download-3mf');
 const fileInput = element<HTMLInputElement>('font-file');
 const choose = element<HTMLButtonElement>('choose-font');
 const forget = element<HTMLButtonElement>('forget-font');
@@ -38,9 +39,13 @@ function syncButtons(): void {
   forget.disabled = busy;
 }
 
+function disableDownloads(disabled: boolean): void {
+  download.disabled = download3mf.disabled = disabled;
+}
+
 function invalidate(): void {
   revision++;
-  download.disabled = true;
+  disableDownloads(true);
   if (result) {
     stage.classList.add('stale');
     notify('Generate again to apply your changes.');
@@ -174,7 +179,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   if (!fontReady || busy || !form.reportValidity()) return;
   const input = inputs(), startedRevision = revision;
-  busy = true; download.disabled = true; syncButtons(); notify('Building your label…');
+  busy = true; disableDownloads(true); syncButtons(); notify('Building your label…');
   try {
     const next = await send({ kind: 'generate', input });
     if (!next) throw new Error('No label was returned. Try generating again.');
@@ -193,20 +198,23 @@ form.addEventListener('submit', async event => {
     element('layer-note').textContent = `Change color above ${next.settings.baseThickness} mm.`;
     const reduced = next.rows.filter(row => row.effectivePt < row.requestedPt - 0.001);
     element('fit-note').textContent = reduced.map(row => `“${row.text}” fitted at ${row.effectivePt.toFixed(1)} pt.`).join(' ');
-    notify(''); download.disabled = false;
+    notify(''); disableDownloads(false);
   } catch (error) { notify(error instanceof Error ? error.message : 'Could not generate the label.', true); }
   finally { busy = false; syncButtons(); }
 });
 
-download.addEventListener('click', () => {
-  if (!result || !generatedInput || download.disabled) return;
+function downloadLabel(format: 'stl' | '3mf'): void {
+  if (!result || !generatedInput || download.disabled || download3mf.disabled) return;
   const stem = [generatedInput.unit, ...generatedInput.names].join('-').normalize('NFKD')
     .replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'mailbox-label';
-  const url = URL.createObjectURL(new Blob([result.stl], { type: 'model/stl' }));
+  const url = URL.createObjectURL(new Blob([format === 'stl' ? result.stl : result.threeMf], { type: `model/${format}` }));
   const anchor = document.createElement('a');
-  anchor.href = url; anchor.download = `${stem}.stl`; anchor.click();
+  anchor.href = url; anchor.download = `${stem}.${format}`; anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+}
+
+download.addEventListener('click', () => downloadLabel('stl'));
+download3mf.addEventListener('click', () => downloadLabel('3mf'));
 
 element('reset-settings').addEventListener('click', () => {
   for (const [key, value] of Object.entries(defaults)) element<HTMLInputElement | HTMLSelectElement>(`setting-${key}`).value = String(value);

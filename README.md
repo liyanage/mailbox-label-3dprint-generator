@@ -2,9 +2,9 @@
 
 [Open the app](https://liyanage.github.io/mailbox-label-3dprint-generator/)
 
-A browser app for making 3D-printable mailbox labels from a unit number and one or two name lines. Preview the result in interactive 3D and download a single, closed STL solid.
+A browser app for making 3D-printable mailbox labels from a unit number and one or two name lines. Preview the result in interactive 3D and download a single, closed STL solid or a multipart 3MF for PrusaSlicer.
 
-All font processing, geometry, and STL generation happen locally in your browser. There is no backend, analytics, or font upload to a server.
+All font processing, geometry, and file generation happen locally in your browser. There is no backend, analytics, or font upload to a server.
 
 ## Run locally
 
@@ -36,7 +36,7 @@ The workflow uses Node.js 24 and installs locked dependencies with `npm ci`. Fon
 1. Choose **SF-Pro-Rounded-Bold.otf** from your computer. The font is not bundled. On macOS it may be installed in `/Library/Fonts/`.
 2. Enter the unit number and name. Select **Add a second name** for a second line. Case, spaces, and accents are preserved when the font supports them.
 3. Select **Generate label**. Drag the preview to rotate, scroll to zoom, or select **Reset** to return to the starting angle.
-4. Select **Download STL** and import it into your slicer as millimeters.
+4. Select **Download STL** for a single solid with a layer-height color change, or **Download 3MF** for separate **Base** and **Text** parts in PrusaSlicer.
 
 The browser remembers the selected font in IndexedDB for this site. **Forget font** removes that copy. Clearing site data also removes it. If browser storage is unavailable, the font can still be used for the current visit. Names are not saved between visits.
 
@@ -61,6 +61,8 @@ Long text shrinks proportionally to the available width by default; the app repo
 Each line is centered by its visible outline, with kerning and shaping applied. The vertical layout adapts to one or two name lines and scales with the base height. Font sizes and corner radius remain as entered; long-text fitting can reduce the font size.
 
 The STL has its underside at Z = 0. Print the base in black and change to white for the first text layer above Z = 2 mm, or above your chosen base thickness. Set the change at that boundary and inspect your slicer's layer preview. STL does not store colors; the black-and-white preview illustrates the intended layer change.
+
+The 3MF includes millimeter units and PrusaSlicer part metadata. Import it as one object with two parts: **Base** and **Text**, with all letters grouped in Text and positioned on top of the base. With a multi-material printer profile selected, assign your black filament to Base and white to Text. The file contains geometry and part names only; it does not set filaments, printer profiles, or slicing settings. Other slicers may handle the part metadata differently.
 
 ## Mailbox compatibility
 
@@ -89,7 +91,7 @@ Width and Height under Advanced as needed.
 - **Manifold / WebAssembly** builds filled 2D regions with letter counters, extrudes the base and lettering, and combines them into one closed solid.
 - A **Web Worker** handles font processing and geometry so the interface remains responsive.
 - **Three.js** renders the actual generated mesh with orbit controls and a preview of the color-change layers. A flat outline preview is available when WebGL is unavailable.
-- A small binary STL writer exports the same mesh shown in the preview. **IndexedDB** stores only the chosen font.
+- A small binary STL writer exports the same mesh shown in the preview. The 3MF writer retains the separate closed volumes and their names, using **fflate** to package the XML and meshes into a ZIP archive. **IndexedDB** stores only the chosen font.
 
 ## Verification
 
@@ -104,6 +106,6 @@ npm run test:browser
 
 For an already installed Chromium-based browser, set `PLAYWRIGHT_EXECUTABLE_PATH` to its executable instead of installing Playwright's browser. Geometry and browser tests that require the font are explicitly skipped when it is unavailable.
 
-The checks cover reference dimensions and lettering placement, closed edges, face orientation, volume, extrusion heights, counters in the digit 8, long-text fitting, accents, and invalid input. Browser checks exercise font selection and persistence, both name layouts, preview controls, stale-download prevention, errors, mobile layout, and independently inspect a downloaded STL. No font file is included in the repository.
+The checks cover reference dimensions and lettering placement, closed edges, face orientation, volume, extrusion heights, counters in the digit 8, long-text fitting, accents, and invalid input. 3MF checks cover archive structure, part grouping, closed meshes, preserved heights, and agreement with the STL volume. Browser checks exercise font selection and persistence, both name layouts, preview controls, stale-download prevention, errors, mobile layout, and inspect both downloaded formats. No font file is included in the repository.
 
 A slicer preview and a physical test print remain the final checks for your printer and mailbox.

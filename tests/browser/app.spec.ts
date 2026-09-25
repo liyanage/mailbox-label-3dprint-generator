@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { inspectStl } from '../stl.mjs';
+import { inspectThreeMf } from '../three-mf.mjs';
 
 const font = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
 test.skip(!existsSync(font), 'Set MAILBOX_TEST_FONT to SF-Pro-Rounded-Bold.otf.');
@@ -14,24 +15,40 @@ async function chooseFont(page: Page): Promise<void> {
 async function generate(page: Page): Promise<void> {
   await page.locator('#generate').click();
   await expect(page.locator('#download')).toBeEnabled();
+  await expect(page.locator('#download-3mf')).toBeEnabled();
 }
 
-test('font, single and double names, 3D views, STL download, persistence and forgetting', async ({ page }, testInfo) => {
+async function download3mf(page: Page, filename: string): Promise<void> {
+  const pending = page.waitForEvent('download');
+  await page.locator('#download-3mf').click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe(filename);
+  const parts = inspectThreeMf(await readFile((await download.path())!));
+  expect(parts.map(part => part.name)).toEqual(['Base', 'Text']);
+  expect(parts[0].levels).toEqual([0, 2]);
+  expect(parts[1].levels).toEqual([2, 3]);
+}
+
+test('font, single and double names, 3D views, STL and 3MF downloads, persistence and forgetting', async ({ page }, testInfo) => {
   const errors: string[] = [], remoteRequests: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => { if (/^https?:/.test(request.url()) && !request.url().startsWith('http://127.0.0.1:4173/')) remoteRequests.push(request.url()); });
   await page.goto('/');
   await expect(page.locator('#generate')).toBeDisabled();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
   await expect(page.locator('canvas')).toBeVisible();
   await chooseFont(page);
   await generate(page);
+  await download3mf(page, '52-hopper.3mf');
   await page.screenshot({ path: testInfo.outputPath('desktop-one-name.png'), fullPage: true });
   await page.locator('#unit').fill('54');
   await page.locator('#name-one').fill('ALPHA');
   await expect(page.locator('#download')).toBeDisabled();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
   await page.locator('#add-name').click();
   await page.locator('#name-two').fill('BETA');
   await generate(page);
+  await download3mf(page, '54-alpha-beta.3mf');
   await page.screenshot({ path: testInfo.outputPath('desktop-two-names.png'), fullPage: true });
   const downloadPromise = page.waitForEvent('download');
   await page.locator('#download').click();
@@ -50,6 +67,7 @@ test('font, single and double names, 3D views, STL download, persistence and for
   await expect(page.locator('#font-name')).toHaveText('SF-Pro-Rounded-Bold.otf');
   await expect(page.locator('#generate')).toBeEnabled();
   await page.locator('#forget-font').click();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
   await expect(page.locator('#font-name')).toHaveText('No font selected');
   await page.reload();
   await expect(page.locator('#generate')).toBeDisabled();
@@ -72,6 +90,7 @@ test('fit reports, validation, restored defaults and mobile layout', async ({ pa
   await page.locator('#generate').click();
   await expect(page.locator('#status')).toContainText('too wide');
   await expect(page.locator('#download')).toBeDisabled();
+  await expect(page.locator('#download-3mf')).toBeDisabled();
   await page.locator('#reset-settings').click();
   await page.locator('#name-one').fill('EXAMPLE');
   await page.locator('#setting-radius').fill('25');

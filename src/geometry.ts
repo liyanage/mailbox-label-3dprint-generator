@@ -1,6 +1,7 @@
 import * as hb from 'harfbuzzjs';
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d';
-import type { LabelInput, LabelResult, Settings, TextRow } from './types.ts';
+import type { LabelInput, LabelResult, MeshGeometry, Settings, TextRow } from './types.ts';
+import { threeMf } from './three-mf.ts';
 
 const PT_TO_MM = 25.4 / 72;
 const TOLERANCE = 0.01;
@@ -146,6 +147,13 @@ export function binaryStl(positions: Float32Array, indices: Uint32Array): ArrayB
   return bytes;
 }
 
+function meshGeometry(solid: Manifold): MeshGeometry {
+  const mesh = solid.getMesh();
+  const positions = new Float32Array(mesh.numVert*3);
+  for (let i = 0; i < mesh.numVert; i++) for (let axis = 0; axis < 3; axis++) positions[i*3+axis] = mesh.vertProperties[i*mesh.numProp+axis];
+  return { positions, indices: new Uint32Array(mesh.triVerts) };
+}
+
 export function generateLabel(wasm: ManifoldToplevel, font: FontOutlines, input: LabelInput): LabelResult {
   validate(input);
   const s = input.settings, allocated: Disposable[] = [];
@@ -177,17 +185,16 @@ export function generateLabel(wasm: ManifoldToplevel, font: FontOutlines, input:
     for (const shape of shapes.slice(1)) letters = keep(letters.add(shape));
     const slab = keep(base.extrude(s.baseThickness));
     const text = keep(keep(letters.extrude(s.textThickness)).translate([0, 0, s.baseThickness]));
-    // Export the boolean union, so the color-change plane has no internal faces.
+    // STL and the preview use the union to avoid internal faces. 3MF retains
+    // the two closed volumes so the slicer can assign a filament to each.
     const solid: Manifold = keep(slab.add(text));
     if (solid.status() !== 'NoError' || solid.isEmpty()) throw new Error('The label could not be made into a closed solid.');
     const components = solid.decompose();
     components.forEach(keep);
     if (components.length !== 1) throw new Error('Some lettering is disconnected from the base.');
-    const mesh = solid.getMesh();
-    const positions = new Float32Array(mesh.numVert*3);
-    for (let i = 0; i < mesh.numVert; i++) for (let axis = 0; axis < 3; axis++) positions[i*3+axis] = mesh.vertProperties[i*mesh.numProp+axis];
-    const indices = new Uint32Array(mesh.triVerts);
-    return { positions, indices, stl: binaryStl(positions, indices), svg: svgPreview(base, letters, s),
+    const { positions, indices } = meshGeometry(solid);
+    return { positions, indices, stl: binaryStl(positions, indices),
+      threeMf: threeMf([{ name: 'Base', ...meshGeometry(slab) }, { name: 'Text', ...meshGeometry(text) }]), svg: svgPreview(base, letters, s),
       rows, settings: { ...s }, volume: solid.volume(), triangles: solid.numTri(), bounds: solid.boundingBox() };
   } finally {
     for (const object of allocated.reverse()) object.delete();

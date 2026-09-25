@@ -21,7 +21,7 @@ self.onmessage = async ({ data }: MessageEvent<EngineRequest>) => {
       if (!font) throw new Error('Choose a font before generating a label.');
       const result = generateLabel(wasm, font, data.input);
       self.postMessage({ id: data.id, ok: true, result } satisfies EngineResponse,
-        { transfer: [result.positions.buffer, result.indices.buffer, result.stl] });
+        { transfer: [result.positions.buffer, result.indices.buffer, result.stl, result.threeMf] });
     }
   } catch (error) {
     self.postMessage({ id: data.id, ok: false, error: error instanceof Error ? error.message : 'Generation failed. Check the font and settings.' } satisfies EngineResponse);

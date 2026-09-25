@@ -5,6 +5,8 @@ import initManifold from 'manifold-3d';
 import { FontOutlines, generateLabel } from '../src/geometry.ts';
 import { defaults } from '../src/types.ts';
 import { inspectStl } from './stl.mjs';
+import { inspectThreeMf } from './three-mf.mjs';
+import { threeMf } from '../src/three-mf.ts';
 
 const fontPath = process.env.MAILBOX_TEST_FONT ?? '/Library/Fonts/SF-Pro-Rounded-Bold.otf';
 const wasm = await initManifold();
@@ -13,6 +15,17 @@ const available = existsSync(fontPath);
 const font = available ? new FontOutlines(Uint8Array.from(readFileSync(fontPath)).buffer) : null;
 const options = { skip: available ? false : 'Set MAILBOX_TEST_FONT to SF-Pro-Rounded-Bold.otf to run geometry checks.' };
 const generate = (unit, names, settings = {}) => generateLabel(wasm, font, { unit, names, settings: { ...defaults, ...settings } });
+
+function checkParts(result) {
+  const parts = inspectThreeMf(new Uint8Array(result.threeMf));
+  assert.deepEqual(parts.map(part => part.name), ['Base', 'Text']);
+  const boundary = Math.fround(result.settings.baseThickness);
+  const top = Math.fround(result.settings.baseThickness+result.settings.textThickness);
+  assert.deepEqual(parts[0].levels, [0, boundary]);
+  assert.deepEqual(parts[1].levels, [boundary, top]);
+  assert.deepEqual(parts[0].max, [Math.fround(result.settings.width), Math.fround(result.settings.height), boundary]);
+  assert.ok(Math.abs(parts.reduce((sum, part) => sum+part.volume, 0)-result.volume) < 0.001);
+}
 
 for (const file of readdirSync(new URL('./fixtures/', import.meta.url))) {
   test(`matches reference dimensions and lettering: ${file}`, options, () => {
@@ -25,6 +38,7 @@ for (const file of readdirSync(new URL('./fixtures/', import.meta.url))) {
     assert.deepEqual([...mesh.min, ...mesh.max], reference.bounds_mm);
     assert.deepEqual(mesh.levels, [0, 2, 3]);
     assert.ok(Math.abs(mesh.volume-result.volume) < 0.001);
+    checkParts(result);
   });
 }
 
@@ -61,10 +75,21 @@ test('accented names and customized dimensions produce closed meshes', options, 
     const mesh = inspectStl(new Uint8Array(result.stl));
     assert.equal(mesh.max[0], 50); assert.equal(mesh.max[1], 45);
     assert.ok(Math.abs(mesh.max[2]-2.4) < 1e-6);
+    checkParts(result);
   }
 });
 
 test('digit 8 retains both counters', options, () => {
   const shape = new wasm.CrossSection(font.contours('8', 50), 'NonZero');
   try { assert.equal(shape.toPolygons().length, 3); } finally { shape.delete(); }
+});
+
+test('3MF packages any number of named closed parts without printer settings', () => {
+  const tetrahedron = {
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
+    indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+  };
+  const parts = inspectThreeMf(new Uint8Array(threeMf(['Base', 'Text', 'A & "B"'].map(name => ({ name, ...tetrahedron })))));
+  assert.deepEqual(parts.map(part => part.name), ['Base', 'Text', 'A &amp; &quot;B&quot;']);
+  for (const part of parts) assert.ok(Math.abs(part.volume-1/6) < 1e-9);
 });

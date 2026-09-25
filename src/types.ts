@@ -29,10 +29,14 @@ export interface TextRow {
   bounds: [number, number, number, number];
 }
 
-export interface LabelResult {
+export interface MeshGeometry {
   positions: Float32Array;
   indices: Uint32Array;
+}
+
+export interface LabelResult extends MeshGeometry {
   stl: ArrayBuffer;
+  threeMf: ArrayBuffer;
   svg: string;
   rows: TextRow[];
   settings: Settings;
