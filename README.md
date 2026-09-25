@@ -36,7 +36,7 @@ The workflow uses Node.js 24 and installs locked dependencies with `npm ci`. Dos
 1. **Upload your own** is selected initially. Choose **SF-Pro-Rounded-Bold.otf** from your computer (on macOS, `/Library/Fonts/SF-Pro-Rounded-Bold.otf`). Alternatively, select **Included fonts** and choose **Dosis — Bold (700)**, especially on iPhone or iPad where uploading a font is less convenient.
 2. Enter the unit number and name. Select **Add a second name** for a second line. Case, spaces, and accents are preserved when the font supports them.
 3. Select **Generate label**. Drag the preview to rotate, scroll to zoom, or select **Reset** to return to the starting angle.
-4. Select **Download STL** for a single solid with a layer-height color change, or **Download 3MF** for separate **Base** and **Text** parts in PrusaSlicer.
+4. Select **Download STL** for a single solid with a layer-height color change, or **Download 3MF** to try the experimental hierarchy described below.
 
 The browser remembers the selected font source, included typeface, and uploaded font in IndexedDB for this site. Switching to Included fonts keeps your uploaded font available when you switch back. **Forget font** removes the uploaded copy. Clearing site data also removes these preferences. If browser storage is unavailable, fonts can still be used for the current visit. Names are not saved between visits.
 
@@ -64,7 +64,20 @@ Each line is centered by its visible outline, with kerning and shaping applied. 
 
 The STL has its underside at Z = 0. Print the base in black and change to white for the first text layer above Z = 2 mm, or above your chosen base thickness. Set the change at that boundary and inspect your slicer's layer preview. STL does not store colors; the black-and-white preview illustrates the intended layer change.
 
-The 3MF includes millimeter units and PrusaSlicer part metadata. Import it as one object with two parts: **Base** and **Text**, with all letters grouped in Text and positioned on top of the base. With a multi-material printer profile selected, assign your black filament to Base and white to Text. The file contains geometry and part names only; it does not set filaments, printer profiles, or slicing settings. Other slicers may handle the part metadata differently.
+The experimental 3MF uses standard nested components, in millimeters:
+
+```text
+Mailbox label
+├── Base
+└── Text
+    ├── Text 1
+    ├── Text 2
+    └── …
+```
+
+Each Text child is a separate connected solid from the lettering, including the unit number. Dots and accents can therefore be separate children. All meshes retain their original positions, with the lettering on top of the base. Only Mailbox label is placed in the build.
+
+This export tests whether PrusaSlicer preserves the Text group when importing and using **Split to parts**; its UI behavior has not been verified. The previous flat PrusaSlicer part metadata is omitted so it cannot override the component hierarchy. With a multi-material printer profile, assign black to the base and white to the text parts that your slicer exposes. The file does not set filaments, printer profiles, or slicing settings. STL output is unchanged.
 
 ## Mailbox compatibility
 

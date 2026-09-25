@@ -186,16 +186,21 @@ export function generateLabel(wasm: ManifoldToplevel, font: FontOutlines, input:
     for (const shape of shapes.slice(1)) letters = keep(letters.add(shape));
     const slab = keep(base.extrude(s.baseThickness));
     const text = keep(keep(letters.extrude(s.textThickness)).translate([0, 0, s.baseThickness]));
-    // STL and the preview use the union to avoid internal faces. 3MF retains
-    // the two closed volumes so the slicer can assign a filament to each.
+    // STL and the preview use the union to avoid internal faces. 3MF keeps
+    // disconnected text solids separate to test nested component handling.
     const solid: Manifold = keep(slab.add(text));
     if (solid.status() !== 'NoError' || solid.isEmpty()) throw new Error('The label could not be made into a closed solid.');
     const components = solid.decompose();
     components.forEach(keep);
     if (components.length !== 1) throw new Error('Some lettering is disconnected from the base.');
+    const textParts = text.decompose();
+    textParts.forEach(keep);
     const { positions, indices } = meshGeometry(solid);
     return { positions, indices, stl: binaryStl(positions, indices),
-      threeMf: threeMf([{ name: 'Base', ...meshGeometry(slab) }, { name: 'Text', ...meshGeometry(text) }]), svg: svgPreview(base, letters, s),
+      threeMf: threeMf([
+        { name: 'Base', ...meshGeometry(slab) },
+        { name: 'Text', children: textParts.map((part, i) => ({ name: `Text ${i+1}`, ...meshGeometry(part) })) },
+      ]), svg: svgPreview(base, letters, s),
       rows, settings: { ...s }, volume: solid.volume(), triangles: solid.numTri(), bounds: solid.boundingBox() };
   } finally {
     for (const object of allocated.reverse()) object.delete();

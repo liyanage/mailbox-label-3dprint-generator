@@ -24,6 +24,13 @@ function checkParts(result) {
   const top = Math.fround(result.settings.baseThickness+result.settings.textThickness);
   assert.deepEqual(parts[0].levels, [0, boundary]);
   assert.deepEqual(parts[1].levels, [boundary, top]);
+  assert.ok(!parts[0].children);
+  assert.ok(parts[1].children.length > 0);
+  for (const [i, child] of parts[1].children.entries()) {
+    assert.equal(child.name, `Text ${i+1}`);
+    assert.ok(!child.children);
+    assert.deepEqual(child.levels, [boundary, top]);
+  }
   assert.deepEqual(parts[0].max, [Math.fround(result.settings.width), Math.fround(result.settings.height), boundary]);
   assert.ok(Math.abs(parts.reduce((sum, part) => sum+part.volume, 0)-result.volume) < 0.001);
 }
@@ -85,14 +92,24 @@ test('digit 8 retains both counters', options, () => {
   try { assert.equal(shape.toPolygons().length, 3); } finally { shape.delete(); }
 });
 
-test('3MF packages any number of named closed parts without printer settings', () => {
+test('3MF preserves nested components, names, and closed meshes without printer settings', () => {
   const tetrahedron = {
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
   };
-  const parts = inspectThreeMf(new Uint8Array(threeMf(['Base', 'Text', 'A & "B"'].map(name => ({ name, ...tetrahedron })))));
-  assert.deepEqual(parts.map(part => part.name), ['Base', 'Text', 'A &amp; &quot;B&quot;']);
-  for (const part of parts) assert.ok(Math.abs(part.volume-1/6) < 1e-9);
+  const parts = inspectThreeMf(new Uint8Array(threeMf([
+    { name: 'Base', ...tetrahedron },
+    { name: 'Text', children: [
+      { name: 'A & "B" < C', ...tetrahedron },
+      { name: 'Nested', children: [{ name: 'Inner', ...tetrahedron }] },
+    ] },
+  ])));
+  assert.deepEqual(parts.map(part => part.name), ['Base', 'Text']);
+  assert.deepEqual(parts[1].children.map(part => part.name), ['A & "B" < C', 'Nested']);
+  assert.equal(parts[1].children[1].children[0].name, 'Inner');
+  assert.ok(Math.abs(parts[0].volume-1/6) < 1e-9);
+  assert.ok(Math.abs(parts[1].volume-1/3) < 1e-9);
+  assert.throws(() => threeMf([{ name: 'Empty', children: [] }]), /at least one/);
 });
 
 test('bundled Dosis uses weight 700 and produces closed single and double-name labels', () => {
@@ -103,6 +120,7 @@ test('bundled Dosis uses weight 700 and produces closed single and double-name l
   const regular = new FontOutlines(bytes, 400);
   const input = { unit: '52', names: ['HOPPER'], settings: defaults };
   const result = generateLabel(wasm, bold, input);
+  assert.equal(inspectThreeMf(new Uint8Array(result.threeMf))[1].children.length, 8);
   assert.ok(result.volume > generateLabel(wasm, regular, input).volume);
   for (const label of [result, generateLabel(wasm, bold, { ...input, unit: '83', names: ['THOMPSON', 'RITCHIE'] })]) {
     const mesh = inspectStl(new Uint8Array(label.stl));
