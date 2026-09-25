@@ -50,7 +50,8 @@ input:focus { outline-offset: 1px; }
 .add-name { display: flex; align-items: center; gap: 5px; border: 0; padding: 0; margin: -3px 0 23px; color: var(--muted); background: transparent; font-size: 14px; }
 .add-name span { font-size: 20px; }
 .add-name:hover { color: var(--ink); }
-.advanced { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 7px; }
+.advanced, .printing-guidance { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.advanced { margin-top: 7px; }
 summary { list-style: none; font-size: 14px; padding: 16px 0; display: flex; justify-content: space-between; cursor: pointer; }
 summary::-webkit-details-marker { display: none; }
 summary span { font-size: 19px; line-height: 16px; font-weight: 300; }
@@ -80,10 +81,9 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 .fallback-preview img { max-width: 100%; max-height: 100%; }
 .preview-information { display: flex; justify-content: space-between; gap: 16px; margin: 14px 0 24px; font-size: 13px; color: var(--muted); line-height: 1.4; }
 #dimensions { color: var(--ink); font-variant-numeric: tabular-nums; }
-.export-row { padding-top: 23px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.export-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .printing-guidance { flex: 1 1 250px; min-width: 0; }
-.printing-guidance summary { max-width: 250px; gap: 20px; }
-.guidance-content { max-width: 48ch; padding: 0 20px 4px 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.guidance-content { max-width: 48ch; padding: 0 20px 19px 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
 .guidance-content p + p { margin-top: 12px; }
 .download-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .download { display: flex; align-items: center; gap: 28px; border: 1px solid var(--ink); color: white; background: var(--ink); padding: 16px 20px; font-size: 15px; white-space: nowrap; }
