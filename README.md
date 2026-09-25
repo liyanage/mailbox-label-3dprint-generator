@@ -85,7 +85,7 @@ With a multi-material printer profile, assign **black to Base** and **white to T
 
 The QR links directly to <https://liyanage.github.io/mailbox-label-3dprint-generator/> with no redirect service. It uses black squares on a white background, version 4 with medium error correction: 33 × 33 modules plus a four-module white quiet zone on every side. The 35 mm footprint gives approximately 0.854 mm modules. QR white is flush with the underside at Z = 0 and extends to Z = 0.2 mm, replacing that region of the black base without overlapping it. The code is oriented to read from underneath; rotate the preview to inspect it.
 
-At 0.1 mm layers the inset occupies the first two layers and needs black and white in each, so a layer-height color change alone is insufficient. Test-print to check white opacity, first-layer detail, and phone scanning. The 35 mm square must fit inside the base, including its rounded corners, and the base must be at least 0.3 mm thick. Turn off **QR code on back (3MF)** under Advanced for smaller labels or an unmarked back.
+At 0.1 mm layers the inset occupies the first two layers and needs black and white in each, so a layer-height color change alone is insufficient. Test-print to check white opacity, first-layer detail, and phone scanning. The 35 mm square must fit inside the base, including its rounded corners, and the base must be at least 0.3 mm thick. Turn off **QR code on back — links to this app (3MF)** under Advanced for smaller labels or an unmarked back.
 
 ## Mailbox compatibility
 
