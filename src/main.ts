@@ -43,9 +43,16 @@ function disableDownloads(disabled: boolean): void {
   download.disabled = download3mf.disabled = disabled;
 }
 
+function syncPrintingGuidance(): void {
+  const height = element<HTMLInputElement>('setting-baseThickness').valueAsNumber;
+  const boundary = Number.isFinite(height) && height >= 0.2 && height <= 10 ? `${height} mm` : 'the top of the base';
+  element('layer-note').textContent = `In your slicer, configure a color change at ${boundary}, switching to white for the first text layer above the black base.`;
+}
+
 function invalidate(): void {
   revision++;
   disableDownloads(true);
+  syncPrintingGuidance();
   if (result) {
     stage.classList.add('stale');
     notify('Generate again to apply your changes.');
@@ -134,7 +141,6 @@ forget.addEventListener('click', async () => {
   stage.classList.remove('stale');
   element('fit-note').textContent = '';
   element('dimensions').textContent = '44.5 × 38.5 × 3 mm';
-  element('layer-note').textContent = 'Change color above 2 mm.';
   try { await forgetFont(); notify(''); }
   catch { forget.hidden = false; notify('The font was cleared from this page, but browser storage could not be cleared. Try Forget font again or clear this site’s data.', true); }
   syncButtons();
@@ -195,7 +201,6 @@ form.addEventListener('submit', async event => {
     }
     stage.classList.remove('stale');
     element('dimensions').textContent = `${next.settings.width} × ${next.settings.height} × ${Number((next.settings.baseThickness+next.settings.textThickness).toFixed(3))} mm`;
-    element('layer-note').textContent = `Change color above ${next.settings.baseThickness} mm.`;
     const reduced = next.rows.filter(row => row.effectivePt < row.requestedPt - 0.001);
     element('fit-note').textContent = reduced.map(row => `“${row.text}” fitted at ${row.effectivePt.toFixed(1)} pt.`).join(' ');
     notify(''); disableDownloads(false);
