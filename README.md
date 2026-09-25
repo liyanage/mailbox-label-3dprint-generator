@@ -6,6 +6,10 @@ A browser app for making 3D-printable mailbox labels from a unit number and one 
 
 All font processing, geometry, and file generation happen locally in your browser. There is no backend, analytics, or font upload to a server.
 
+## Printed examples
+
+![Two finished black mailbox labels with raised white lettering: 52 HOPPER with one name line, and 83 THOMPSON / RITCHIE with two name lines.](images/printed-labels.jpg)
+
 ## Run locally
 
 Use Node.js 22.18 or newer. From this folder:
